@@ -2619,7 +2619,7 @@ class scss_parser {
 					$include = $this->pushSpecialBlock("include");
 					$include->child = $child;
 				} else {
-					$this->append($child);
+					$this->append($child, $s);
 				}
 
 				return true;
@@ -2631,7 +2631,7 @@ class scss_parser {
 				$this->valueList($importPath) &&
 				$this->end())
 			{
-				$this->append(array("import", $importPath));
+				$this->append(array("import", $importPath), $s);
 				return true;
 			} else {
 				$this->seek($s);
@@ -2641,7 +2641,7 @@ class scss_parser {
 				$this->selectors($selector) &&
 				$this->end())
 			{
-				$this->append(array("extend", $selector));
+				$this->append(array("extend", $selector), $s);
 				return true;
 			} else {
 				$this->seek($s);
@@ -2661,7 +2661,7 @@ class scss_parser {
 			}
 
 			if ($this->literal("@return") && $this->valueList($retVal) && $this->end()) {
-				$this->append(array("return", $retVal));
+				$this->append(array("return", $retVal), $s);
 				return true;
 			} else {
 				$this->seek($s);
@@ -2723,14 +2723,14 @@ class scss_parser {
 			if (($this->literal("@debug") || $this->literal("@warn")) &&
 				$this->valueList($value) &&
 				$this->end()) {
-				$this->append(array("debug", $value, $s));
+				$this->append(array("debug", $value, $s), $s);
 				return true;
 			} else {
 				$this->seek($s);
 			}
 
 			if ($this->literal("@content") && $this->end()) {
-				$this->append(array("mixin_content"));
+				$this->append(array("mixin_content"), $s);
 				return true;
 			} else {
 				$this->seek($s);
@@ -2760,7 +2760,7 @@ class scss_parser {
 			if ($this->literal("@charset") &&
 				$this->valueList($charset) && $this->end())
 			{
-				$this->append(array("charset", $charset));
+				$this->append(array("charset", $charset), $s);
 				return true;
 			} else {
 				$this->seek($s);
@@ -2789,7 +2789,7 @@ class scss_parser {
 			$this->end())
 		{
 			$name = array("string", "", array($name));
-			$this->append(array("assign", $name, $value));
+			$this->append(array("assign", $name, $value), $s);
 			return true;
 		} else {
 			$this->seek($s);
@@ -2810,7 +2810,7 @@ class scss_parser {
 					$defaultVar = true;
 				}
 			}
-			$this->append(array("assign", $name, $value, $defaultVar));
+			$this->append(array("assign", $name, $value, $defaultVar), $s);
 			return true;
 		} else {
 			$this->seek($s);
@@ -2837,7 +2837,7 @@ class scss_parser {
 		if ($this->propertyName($name) && $this->literal(":")) {
 			$foundSomething = false;
 			if ($this->valueList($value)) {
-				$this->append(array("assign", $name, $value));
+				$this->append(array("assign", $name, $value), $s);
 				$foundSomething = true;
 			}
 
@@ -2865,10 +2865,10 @@ class scss_parser {
 				$include = $block->child;
 				unset($block->child);
 				$include[3] = $block;
-				$this->append($include);
+				$this->append($include, $s);
 			} elseif (empty($block->dontAppend)) {
 				$type = isset($block->type) ? $block->type : "block";
-				$this->append(array($type, $block));
+				$this->append(array($type, $block), $s);
 			}
 			return true;
 		}
@@ -2932,7 +2932,8 @@ class scss_parser {
 		return $old;
 	}
 
-	protected function append($statement) {
+	protected function append($statement, $pos = null) {
+		if ($pos !== null) $statement[-1] = $pos;
 		$this->env->children[] = $statement;
 	}
 
