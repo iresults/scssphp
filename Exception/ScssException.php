@@ -69,13 +69,7 @@ class Exception_ScssException extends Exception {
 	 * @return	Tx_Iresults_Error
 	 */
 	static public function errorWithMessageCodeAndUserInfo($message, $code = 0, $userInfo = array()) {
-		$error = NULL;
-		if (IR_MODERN_PHP) {
-			$calledClass = get_called_class();
-			$error = new $calledClass($message, $code);
-		} else {
-			$error = new self($message, $code);
-		}
+		$error = new self($message, $code);
 		$error->_setUserInfo($userInfo);
 		return $error;
 	}

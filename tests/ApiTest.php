@@ -17,18 +17,46 @@ class ApiTest extends PHPUnit_Framework_TestCase {
 			"result: 30;",
 			$this->compile("result: add-two(10, 20);"));
 	}
-	
-	public function testImportMissing(){
+
+	public function testImportMissingCss(){
+		$this->assertEquals(
+			'@import "missing.css";',
+			$this->compile('@import "missing.css";'));
+	}
+
+	public function testImportMissingCssStrict(){
+		// Strict should be ignored for css imports
+		$this->scss->setThrowExceptionIfImportFileNotFound(TRUE);
+		$this->assertEquals(
+			'@import "missing.css";',
+			$this->compile('@import "missing.css";'));
+	}
+
+	/**
+	 *
+	 */
+	public function testImportMissingSass(){
 		$this->assertEquals(
 			'@import "missing";',
 			$this->compile('@import "missing";'));
 	}
-	
+
+	/**
+	 * @expectedException Exception_ScssException
+	 */
+	public function testImportMissingSassStrict(){
+		$this->scss->setThrowExceptionIfImportFileNotFound(TRUE);
+		$this->assertEquals(
+			'@import "missing";',
+			$this->compile('@import "missing";'));
+	}
+
+
 	public function testImportCustomCallback(){
 		$this->scss->addImportPath(function($path) {
 			return __DIR__.'/inputs/' . str_replace('.css','.scss',$path);
 		});
-		
+
 		$this->assertEquals(
 			trim(file_get_contents(__DIR__.'/outputs/variables.css')),
 			$this->compile('@import "variables.css";'));

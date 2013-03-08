@@ -63,9 +63,18 @@ class scssc {
 	protected $importPaths = array("");
 	protected $importCache = array();
 
+	/**
+	 * Indicates if an exception should be thrown if a required SASS file could
+	 * not be found in findImport()
+	 * @var boolean
+	 */
+	protected $throwExceptionIfImportFileNotFound = FALSE;
+
 	protected $userFunctions = array();
 
 	protected $formatter = "scss_formatter_nested";
+
+
 
 	function compile($code, $name=null) {
 		$this->indentLevel = -1;
@@ -93,6 +102,15 @@ class scssc {
 
 		setlocale(LC_NUMERIC, $locale);
 		return $out;
+	}
+
+	/**
+	 * Configure if an exception should be thrown if an import file could not be
+	 * found
+	 * @param boolean $throwExceptionIfImportFileNotFound
+	 */
+	public function setThrowExceptionIfImportFileNotFound($throwExceptionIfImportFileNotFound) {
+		$this->throwExceptionIfImportFileNotFound = $throwExceptionIfImportFileNotFound;
 	}
 
 	protected function isSelfExtend($target, $origin) {
@@ -1506,21 +1524,38 @@ class scssc {
 	protected function findImport($url) {
 		$urls = array();
 
-		// for "normal" scss imports (ignore vanilla css and external requests)
-		if (!preg_match('/\.css|^http:\/\/$/', $url)) {
-			// try both normal and the _partial filename
+		if (substr($url, 0, 7) === 'http://'
+			|| substr($url, 0, 8) === 'https://'
+			|| strpos($url, 'url(') !== FALSE) {
+			return NULL;
+		}
+
+		// // for "normal" scss imports (ignore vanilla css and external requests)
+		// if (!preg_match('/\.css|^http:\/\/$/', $url)) {
+		// 	// try both normal and the _partial filename
+		// 	$urls = array($url, preg_replace('/[^\/]+$/', '_\0', $url));
+		// }
+
+		/*
+		 * If the imported file isn't a css file, add the normal and _partial
+		 * filename to the list of URLs
+		 */
+		if (strpos($url, '.css') === FALSE) {
 			$urls = array($url, preg_replace('/[^\/]+$/', '_\0', $url));
 		}
 
+
 		foreach ($this->importPaths as $dir) {
 			if (is_string($dir)) {
+				// Add a trailing slash if dir isn't empty
+				$dir .= (!empty($dir) && substr($dir, -1) != '/' ? '/' : '');
+
+
 				// check urls for normal import paths
 				foreach ($urls as $full) {
-					$full = $dir .
-						(!empty($dir) && substr($dir, -1) != '/' ? '/' : '') .
-						$full;
+					$full = $dir . $full;
 
-					if ($this->fileExists($file = $full.'.scss') ||
+					if ($this->fileExists($file = $full . '.scss') ||
 						$this->fileExists($file = $full))
 					{
 						return $file;
@@ -1528,11 +1563,20 @@ class scssc {
 				}
 			} else {
 				// check custom callback for import path
-				$file = call_user_func($dir,$url,$this);
+				$file = call_user_func($dir, $url, $this);
 				if ($file !== null) {
 					return $file;
 				}
 			}
+		}
+
+		// Throw an exception if no SASS files are found and
+		if (strpos($url, '.css') === FALSE && $this->throwExceptionIfImportFileNotFound) {
+			throw Exception_ScssException::errorWithMessageCodeAndUserInfo(
+				'Import file "' . $url . '" not found',
+				1362753161,
+				array('url' => $url, 'importPaths' => $this->importPaths)
+			);
 		}
 
 		return null;
